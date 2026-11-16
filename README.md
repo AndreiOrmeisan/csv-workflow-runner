@@ -12,7 +12,7 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-Open http://localhost:3000. Press Ctrl+C to stop the server. The predev hook bundles the worker. After editing worker code or its processing modules, restart the development server to rebuild the worker.
+Open http://localhost:3000. Press Ctrl+C to stop the server. Next.js configuration generates the worker before development and production compilation, including direct `next build` calls. After editing worker code or its processing modules, restart the development server to rebuild the worker.
 
 ## Quality checks
 
@@ -24,6 +24,18 @@ npm.cmd run build
 ```
 
 Tests cover quoted delimiters, escaped quotes, multiline fields, delimiter detection, BOM round trips, duplicate rows, empty rows, column-order-independent merging, missing columns, malformed input, renaming, recipe persistence, validation, and the bundled worker protocol. The build creates the static website in `out`.
+
+The worker client waits up to 15 seconds for a versioned readiness message and up to 60 seconds for each processing response. Startup, runtime, message decoding, invalid protocol, and timeout failures reject pending work, terminate the failed worker, and release the UI. A later upload creates a fresh worker. CSV processing stays in the worker.
+
+Run browser regression tests after building. These serve `out` directly on port 4173 and exercise the exported worker, CSV download, recipe reuse, missing assets, retry, real timeout deadlines, and a large import. They do not use the development server.
+
+```powershell
+npm.cmd run build
+npx.cmd playwright install chromium
+npm.cmd run test:production
+```
+
+To use an already installed Microsoft Edge browser instead of downloading Chromium, set `$env:PLAYWRIGHT_CHANNEL = 'msedge'` before `npm.cmd run test:production`.
 
 ## Production configuration
 
@@ -53,6 +65,8 @@ npx.cmd wrangler pages deploy out
 
 This project uses `output: "export"` and trailing slashes. It has no API routes, middleware, runtime server, database, or account system. Serve the `out` directory through a static host. `next start` is incompatible with static export.
 
+Deploy the complete `out` directory, including `csv-worker.js`. The build's postbuild check verifies that this file is present and exactly matches the current bundle. Check the deployed `/csv-worker.js` URL after publishing. It must return HTTP 200 with a JavaScript content type. A 404 page or HTML fallback cannot run as a worker. Hosting configuration and asset-upload exclusions must preserve this file.
+
 ## Workflow behavior
 
 1. Add one or more UTF-8 CSV files with a header row.
@@ -81,7 +95,11 @@ All values stay text. Leading zeros, date-like strings, and formula-like strings
 - `src/lib/transform.ts` handles immutable merging and transformations.
 - `src/lib/recipes.ts` validates configuration-only recipes and persists them.
 - `src/workers/csv.worker.ts` handles processing messages.
-- `scripts/build-worker.mjs` bundles the worker with esbuild before development, tests, and production builds.
+- `src/lib/worker-client.ts` handles readiness, request deadlines, worker failures, and cleanup.
+- `src/lib/worker-protocol.ts` defines the versioned worker message protocol.
+- `scripts/build-worker.mjs` bundles the worker with esbuild, invoked by Next.js configuration and unit-test setup.
+- `scripts/verify-export.mjs` verifies the worker in the static production output.
+- `scripts/serve-export.mjs` serves static files locally for production browser tests.
 - `src/components/runner.tsx` provides the client workspace.
 - `src/app` provides the landing page, shared design, metadata, privacy/about pages, robots, and sitemap.
 - `tests` provides automated unit and bundled-worker regression coverage.

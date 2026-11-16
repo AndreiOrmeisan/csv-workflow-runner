@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/build-worker.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/build-worker.mjs",
     "build": "next build",
+    "postbuild": "node scripts/verify-export.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/build-worker.mjs",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:production": "playwright test"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -19,6 +19,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",

@@ -9,14 +9,23 @@ test("production worker parses, transforms, exports, and reports errors", async 
   const self: {
     postMessage: (value: (typeof messages)[number]) => void;
     onmessage?: (event: { data: unknown }) => Promise<void>;
-  } = { postMessage: (value) => messages.push(value) };
+    addEventListener: () => void;
+  } = {
+    postMessage: (value) => messages.push(value),
+    addEventListener: () => {},
+  };
   runInNewContext(readFileSync("public/csv-worker.js", "utf8"), {
     self,
     crypto,
     console,
     TextDecoder,
+    File,
     setTimeout,
     clearTimeout,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(messages.shift())), {
+    type: "ready",
+    version: 1,
   });
   assert.ok(self.onmessage);
   await self.onmessage({
@@ -58,6 +67,12 @@ test("production worker parses, transforms, exports, and reports errors", async 
     },
   });
   assert.ok(messages[3].error);
-  await self.onmessage({ data: { id: 5, kind: "parse", file: new File([new Uint8Array([0xff, 0xfe])], "legacy.csv") } });
+  await self.onmessage({
+    data: {
+      id: 5,
+      kind: "parse",
+      file: new File([new Uint8Array([0xff, 0xfe])], "legacy.csv"),
+    },
+  });
   assert.match(messages[4].error ?? "", /UTF-8/);
 });

@@ -6,24 +6,11 @@ import { readRecipes, validateRecipe, writeRecipes } from "@/lib/recipes";
 import {
   defaultConfig,
   type CsvFile,
-  type Dataset,
   type Recipe,
   type WorkflowConfig,
 } from "@/lib/types";
-import type { WorkerRequest } from "@/workers/csv.worker";
-
-interface Preview {
-  before: Dataset;
-  after: Dataset;
-  beforeCount: number;
-  afterCount: number;
-  missing: string[];
-}
-type Task = WorkerRequest extends infer R
-  ? R extends { id: number }
-    ? Omit<R, "id">
-    : never
-  : never;
+import { CsvWorkerClient, CsvWorkerError } from "@/lib/worker-client";
+import type { Preview, WorkerTask } from "@/lib/worker-protocol";
 const options = [
   [
     "trim",
@@ -70,39 +57,14 @@ export function Runner() {
   const [recipeName, setRecipeName] = useState("");
   const [recipeIndex, setRecipeIndex] = useState("");
   const [delimiter, setDelimiter] = useState<"," | ";">(",");
-  const worker = useRef<Worker | null>(null);
-  const pending = useRef(
-    new Map<
-      number,
-      { resolve: (value: unknown) => void; reject: (error: Error) => void }
-    >(),
-  );
-  const sequence = useRef(0);
+  const worker = useRef<CsvWorkerClient | null>(null);
   const bytes = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const recipeInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const instance = new Worker("/csv-worker.js");
+    const instance = new CsvWorkerClient();
     worker.current = instance;
-    instance.onmessage = (
-      event: MessageEvent<{ id: number; result: unknown; error?: string }>,
-    ) => {
-      const task = pending.current.get(event.data.id);
-      pending.current.delete(event.data.id);
-      if (event.data.error) task?.reject(new Error(event.data.error));
-      else task?.resolve(event.data.result);
-    };
-    const tasks = pending.current;
-    instance.onerror = () => {
-      for (const task of tasks.values())
-        task.reject(
-          new Error(
-            "The processing worker failed. Reload the page and try a smaller file.",
-          ),
-        );
-      tasks.clear();
-    };
     const storageTimer = setTimeout(() => {
       try {
         setRecipes(readRecipes(localStorage));
@@ -114,28 +76,15 @@ export function Runner() {
     }, 0);
     return () => {
       clearTimeout(storageTimer);
-      instance.terminate();
-      for (const task of tasks.values())
-        task.reject(new Error("Processing cancelled."));
-      tasks.clear();
+      instance.dispose();
+      worker.current = null;
     };
   }, []);
 
-  function request<T>(task: Task): Promise<T> {
-    return new Promise((resolve, reject) => {
-      if (!worker.current) {
-        reject(
-          new Error("The processing worker is unavailable in this browser."),
-        );
-        return;
-      }
-      const id = ++sequence.current;
-      pending.current.set(id, {
-        resolve: (value) => resolve(value as T),
-        reject,
-      });
-      worker.current.postMessage({ ...task, id });
-    });
+  async function request<T>(task: WorkerTask): Promise<T> {
+    if (!worker.current)
+      throw new Error("The processing worker is unavailable in this browser.");
+    return worker.current.request<T>(task);
   }
   function update(next: WorkflowConfig) {
     setConfig(next);
@@ -169,6 +118,8 @@ export function Runner() {
         errors.push(
           `${file.name} — ${failure instanceof Error ? failure.message : "Import failed."}`,
         );
+        // Stop the batch on infrastructure failure. A new upload can retry.
+        if (failure instanceof CsvWorkerError) break;
       }
     }
     setFiles((current) => [...current, ...accepted]);
