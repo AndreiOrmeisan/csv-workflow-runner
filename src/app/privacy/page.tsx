@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy",
   alternates: { canonical: "/privacy/" },
+  openGraph: {
+    type: "website",
+    siteName: "CSV Workflow Runner",
+    title: "Privacy | CSV Workflow Runner",
+    url: "/privacy/",
+  },
 };
 export default function Privacy() {
   return (

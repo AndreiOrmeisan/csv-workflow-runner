@@ -39,7 +39,7 @@ To use an already installed Microsoft Edge browser instead of downloading Chromi
 
 ## Production configuration
 
-Set `NEXT_PUBLIC_SITE_URL` to your actual site's origin before building. An absent or invalid value falls back to `http://localhost:3000`. This origin controls canonical URLs, robots.txt, and sitemap.xml. Rebuild after changing it.
+The default production origin is `https://csv-workflow-runner.pages.dev`. Static exports use this origin for canonical URLs, Open Graph URLs, robots.txt, and sitemap.xml, including builds with no environment variable configured. To move to a custom domain, set `NEXT_PUBLIC_SITE_URL` to its HTTPS origin before building. Missing, invalid, insecure, or localhost values fall back to the production origin. Rebuild and redeploy after changing the value. A runtime environment variable is unnecessary.
 
 ```powershell
 $env:NEXT_PUBLIC_SITE_URL = Read-Host 'Enter the actual HTTPS origin of your deployed site'
@@ -54,7 +54,7 @@ py -m http.server 8080 --directory out
 
 ## Cloudflare Pages deployment
 
-Create a Cloudflare Pages project from this repository. Select the static framework preset, use `npm run build` as the build command, and `out` as the output directory. If the repository contains this project in a subfolder, set the root directory to `csv-workflow-runner`. Configure Node.js 22 or newer and set `NEXT_PUBLIC_SITE_URL` to your assigned Pages origin or custom domain. If the Pages origin is assigned after the first deployment, set it and redeploy.
+Create a Cloudflare Pages project from this repository. Select the static framework preset, use `npm run build` as the build command, and `out` as the output directory. If the repository contains this project in a subfolder, set the root directory to `csv-workflow-runner`. Configure Node.js 22 or newer. The default SEO origin matches `https://csv-workflow-runner.pages.dev`. For a future custom domain, set `NEXT_PUBLIC_SITE_URL` in the Cloudflare Pages build environment and redeploy.
 
 For a direct upload from PowerShell, install and authenticate the official Cloudflare Wrangler CLI, create a Pages project in your account, and run the following. The command prompts for the target project.
 

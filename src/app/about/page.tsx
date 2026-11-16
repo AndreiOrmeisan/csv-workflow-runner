@@ -3,6 +3,12 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "About",
   alternates: { canonical: "/about/" },
+  openGraph: {
+    type: "website",
+    siteName: "CSV Workflow Runner",
+    title: "About | CSV Workflow Runner",
+    url: "/about/",
+  },
 };
 export default function About() {
   return (

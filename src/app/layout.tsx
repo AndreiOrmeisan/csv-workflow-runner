@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   description:
     "Clean, merge, and transform CSV files privately in your browser. Save reusable workflow recipes and download Excel-friendly CSVs. Free, with no account required.",
   alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "CSV Workflow Runner",
+    title: "CSV Workflow Runner — Clean CSVs & Save Reusable Recipes",
+    description:
+      "Clean, merge, and transform CSV files privately in your browser. Save reusable workflow recipes and download Excel-friendly CSVs.",
+    url: siteUrl,
+  },
 };
 export default function RootLayout({
   children,
