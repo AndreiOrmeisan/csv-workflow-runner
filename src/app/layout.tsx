@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description:
     "Clean, merge, and transform CSV files privately in your browser. Save reusable workflow recipes and download Excel-friendly CSVs. Free, with no account required.",
   alternates: { canonical: "/" },
+  other: {
+    "google-adsense-account": "ca-pub-8517954432428097",
+  },
   openGraph: {
     type: "website",
     siteName: "CSV Workflow Runner",
